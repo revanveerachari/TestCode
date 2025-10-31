@@ -11,6 +11,8 @@
     <!-- CodeMirror CSS and Theme (Monokai for VS Code-like dark syntax highlighting) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+    <!-- JSZip for exporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <style>
         /* Custom styles for a CodePen-like dark theme */
@@ -185,6 +187,7 @@
             display: flex;
             gap: 1rem;
             font-size: 0.8rem;
+            align-items: center; /* vertically center user count */
         }
 
         .user-count {
@@ -244,15 +247,69 @@
             background-color: #282c34;
             border-right: 1px solid #333;
         }
+
+        /* --- Added Styles for Top Bar Buttons --- */
+
+        .top-bar-btn {
+            background-color: #333;
+            color: #f1f1f1;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            text-decoration: none; /* For the <a> tag */
+        }
+
+        .top-bar-btn:hover {
+            background-color: #ffffff;
+            color: #111;
+        }
+        
+        .thanks-btn {
+            background-color: #0ebeff; /* Blue color like CSS title */
+            color: #111;
+        }
+        
+        .thanks-btn:hover {
+            background-color: #f1f1f1;
+            color: #0ebeff;
+        }
+        
+        /* Ensure FontAwesome icons in buttons have correct margin */
+        .top-bar-btn .fa-download,
+        .top-bar-btn .fa-heart {
+            margin-right: 0.25rem; /* 4px */
+        }
     </style>
 </head>
 <body>
     <!-- Top Bar: Live Users Count -->
     <div id="top-bar">
         <div class="logo"><span>T</span><span>e</span><span>s</span><span>t</span><span>C</span><span>o</span><span>d</span><span>e</span></div>
-        <div class="user-info">
-            <span id="live-users-count" class="user-count">Live Users: Initializing...</span>
-            <!-- Removed User ID display -->
+        
+        <!-- Updated: Wrapper for user info and buttons -->
+        <div class="flex items-center gap-4"> 
+            <div class="user-info">
+                <span id="live-users-count" class="user-count">Live Users: Initializing...</span>
+                <!-- Removed User ID display -->
+            </div>
+            
+            <!-- Added: Action buttons -->
+            <div class="action-buttons flex items-center gap-3">
+                <button id="export-btn" class="top-bar-btn">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
+                <a href="https://in.linkedin.com/in/revanveerachari" target="_blank" rel="noopener noreferrer" class="top-bar-btn thanks-btn">
+                    <i class="fas fa-heart"></i>
+                    Say Thanks
+                </a>
+            </div>
         </div>
     </div>
 
@@ -584,8 +641,62 @@
             if (htmlEditor) htmlEditor.on('change', debouncedUpdate);
             if (cssEditor) cssEditor.on('change', debouncedUpdate);
             if (jsEditor) jsEditor.on('change', debouncedUpdate);
+            
             // Initial run
             setTimeout(updatePreview, 100); // Small delay for iframe readiness
+
+            // --- Added: Export Button Logic ---
+            const exportBtn = document.getElementById('export-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', async () => {
+                    try {
+                        const htmlCode = htmlEditor ? htmlEditor.getValue() : '';
+                        const cssCode = cssEditor ? cssEditor.getValue() : '';
+                        const jsCode = jsEditor ? jsEditor.getValue() : '';
+
+                        const zip = new JSZip();
+
+                        // Create a standalone index.html that links the CSS and JS
+                        const previewHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestCode Export</title>
+    <!-- Link to the CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Add the HTML content -->
+    ${htmlCode}
+    
+    <!-- Link to the JavaScript file -->
+    <script src="script.js"><\/script>
+</body>
+</html>`;
+                        
+                        // Add files to the zip
+                        zip.file("index.html", previewHtml);
+                        zip.file("style.css", cssCode);
+                        zip.file("script.js", jsCode);
+
+                        // Generate the zip file asynchronously
+                        const content = await zip.generateAsync({ type: "blob" });
+
+                        // Create a download link and trigger the download
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(content);
+                        link.download = "TestCode_Export.zip";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                    } catch (e) {
+                        console.error("Error exporting project:", e);
+                    }
+                });
+            }
         });
 
         // --- Open in New Tab Button ---
