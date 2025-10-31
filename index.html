@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestCode Live Editor</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CodeMirror CSS and Theme (Monokai for VS Code-like dark syntax highlighting) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+    
+    <style>
+        /* Custom styles for a CodePen-like dark theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111111; /* Darker background */
+            color: #f1f1f1; /* Lighter text */
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .editor-title {
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+            background-color: #1d1f20; /* Dark header */
+            border-bottom: 1px solid #333;
+            font-size: 0.875rem;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 3px solid transparent; /* Base for rainbow borders */
+        }
+        
+        /* Rainbow borders for editor titles */
+        .html-title {
+            border-top-color: #ff3c41;
+            color: #ff3c41;
+        }
+        .css-title {
+            border-top-color: #0ebeff;
+            color: #0ebeff;
+        }
+        .js-title {
+            border-top-color: #f7df1e;
+            color: #f7df1e;
+        }
+
+        /* Icons in editor titles */
+        .editor-title i {
+            margin-right: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .code-editor {
+            flex-grow: 1;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: #282c34; /* Editor background */
+            color: #e0e0e0;
+            border: none;
+            resize: none;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            caret-color: #ffffff; /* Changed to white */
+            outline: none;
+        }
+
+        .code-editor::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .code-editor::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 4px;
+        }
+
+        .code-editor::-webkit-scrollbar-track {
+            background-color: #2d2d2d;
+        }
+
+        #preview {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: white;
+            padding-top: 37px; /* Make space for new preview header */
+            box-sizing: border-box;
+        }
+
+        /* Resizers */
+        .resizer-h {
+            height: 8px;
+            background-color: #111111;
+            cursor: ns-resize;
+            transition: background-color 0.1s;
+            z-index: 20;
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            user-select: none;
+        }
+
+        .resizer-h:hover {
+            background-color: #ffffff; /* Changed to white */
+        }
+
+        .resizer-v {
+            width: 8px;
+            background-color: #111111;
+            cursor: ew-resize;
+            transition: background-color 0.1s;
+            z-index: 20;
+            border-left: 2px solid #333;
+            border-right: 2px solid #333;
+            user-select: none;
+            min-height: 100%;
+        }
+
+        .resizer-v:hover {
+            background-color: #ffffff; /* Changed to white */
+        }
+
+        /* Editor pane layout */
+        #top-pane {
+            min-height: 100px;
+            display: flex;
+            position: relative;
+        }
+
+        #bottom-pane {
+            min-height: 100px;
+            position: relative;
+        }
+
+        /* Top bar */
+        #top-bar {
+            background-color: #1d1f20; /* Dark top bar */
+            border-bottom: 1px solid #333;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: bold;
+            color: #ffffff; /* Changed to white */
+            font-size: 1.1rem;
+        }
+
+        /* Blinking lights animation for logo letters */
+        .logo span {
+            display: inline-block;
+            animation: blink 1.5s infinite;
+            text-shadow: 0 0 5px #ffffff;
+        }
+
+        .logo span:nth-child(1) { animation-delay: 0s; }
+        .logo span:nth-child(2) { animation-delay: 0.15s; }
+        .logo span:nth-child(3) { animation-delay: 0.3s; }
+        .logo span:nth-child(4) { animation-delay: 0.45s; }
+        .logo span:nth-child(5) { animation-delay: 0.6s; }
+        .logo span:nth-child(6) { animation-delay: 0.75s; }
+        .logo span:nth-child(7) { animation-delay: 0.9s; }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .user-info {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+        }
+
+        .user-count {
+            color: #ffffff; /* Changed to white */
+        }
+
+        .user-id {
+            color: #888;
+        }
+        
+        /* New Preview Header Styles */
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background-color: #1d1f20; /* Match editor titles */
+            color: #aaa;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
+            box-sizing: border-box;
+            height: 37px; /* Fixed height for padding calculation */
+        }
+
+        #open-preview-btn {
+            background-color: #333;
+            color: #f1f1f1;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #open-preview-btn:hover {
+            background-color: #ffffff; /* Changed to white */
+            color: #111;
+        }
+
+        /* CodeMirror overrides for better VS Code-like feel */
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .CodeMirror-gutters {
+            background-color: #282c34;
+            border-right: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar: Live Users Count -->
+    <div id="top-bar">
+        <div class="logo"><span>T</span><span>e</span><span>s</span><span>t</span><span>C</span><span>o</span><span>d</span><span>e</span></div>
+        <div class="user-info">
+            <span id="live-users-count" class="user-count">Live Users: Initializing...</span>
+            <!-- Removed User ID display -->
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex flex-col h-[calc(100vh-40px)]" id="main-container">
+        <!-- Top Pane: Code Editors -->
+        <div id="top-pane" style="height: 50%;">
+            <!-- HTML Editor -->
+            <div id="html-editor-container" class="editor-container" style="width: 33.33%;">
+                <div class="editor-title html-title">
+                    <i class="fab fa-html5"></i>
+                    <span>HTML</span>
+                </div>
+                <textarea id="html-editor" class="code-editor" placeholder="<!-- Write your HTML here -->"></textarea>
+            </div>
+
+            <!-- Vertical Resizer 1 -->
+            <div id="resizer-v-1" class="resizer-v" data-prev="html-editor-container" data-next="css-editor-container"></div>
+
+            <!-- CSS Editor -->
+            <div id="css-editor-container" class="editor-container" style="width: 33.33%;">
+                <div class="editor-title css-title">
+                    <i class="fab fa-css3-alt"></i>
+                    <span>CSS</span>
+                </div>
+                <textarea id="css-editor" class="code-editor" placeholder="/* Write your CSS here */"></textarea>
+            </div>
+
+            <!-- Vertical Resizer 2 -->
+            <div id="resizer-v-2" class="resizer-v" data-prev="css-editor-container" data-next="js-editor-container"></div>
+
+            <!-- JavaScript Editor -->
+            <div id="js-editor-container" class="editor-container" style="width: 33.33%;">
+                <div class="editor-title js-title">
+                    <i class="fab fa-js"></i>
+                    <span>JS</span>
+                </div>
+                <textarea id="js-editor" class="code-editor" placeholder="// Write your JavaScript here"></textarea>
+            </div>
+        </div>
+
+        <!-- Horizontal Resizer -->
+        <div id="resizer-h" class="resizer-h"></div>
+
+        <!-- Bottom Pane: Live Preview -->
+        <div id="bottom-pane" style="height: 50%;">
+        <div class="preview-header">
+            <span>PREVIEW</span>
+                <button id="open-preview-btn">Open in New Tab</button>
+            </div>
+            <iframe id="preview" title="Live Code Preview"></iframe>
+        </div>
+    </div>
+
+    <!-- CodeMirror Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+
+    <script>
+        // --- Random Live User Count Simulator ---
+        const liveUsersCountEl = document.getElementById('live-users-count');
+        let currentUsers = Math.floor(Math.random() * 15) + 5; // Start with 5-20 users
+
+        const updateRandomLiveCount = () => {
+            const change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+            currentUsers += change;
+            if (currentUsers < 1) { // Ensure it never goes below 1
+                currentUsers = 1;
+            }
+            if (liveUsersCountEl) { // Check if element exists
+                liveUsersCountEl.textContent = `Live Users: ${currentUsers}`;
+            }
+        };
+        
+        // Set initial count immediately
+        updateRandomLiveCount(); 
+        // Update count every 2.5 seconds
+        setInterval(updateRandomLiveCount, 2500); 
+
+        // --- End of Simulator ---
+
+        // Initialize CodeMirror editors after DOM load
+        let htmlEditor, cssEditor, jsEditor, previewFrame;
+
+        function initEditors() {
+            const htmlTextarea = document.getElementById('html-editor');
+            const cssTextarea = document.getElementById('css-editor');
+            const jsTextarea = document.getElementById('js-editor');
+            previewFrame = document.getElementById('preview');
+
+            if (htmlTextarea) {
+                htmlEditor = CodeMirror.fromTextArea(htmlTextarea, {
+                    mode: 'htmlmixed',
+                    theme: 'monokai',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    indentUnit: 2,
+                    tabSize: 2,
+                    viewportMargin: Infinity
+                });
+            }
+
+            if (cssTextarea) {
+                cssEditor = CodeMirror.fromTextArea(cssTextarea, {
+                    mode: 'css',
+                    theme: 'monokai',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    indentUnit: 2,
+                    tabSize: 2,
+                    viewportMargin: Infinity
+                });
+            }
+
+            if (jsTextarea) {
+                jsEditor = CodeMirror.fromTextArea(jsTextarea, {
+                    mode: 'javascript',
+                    theme: 'monokai',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    indentUnit: 2,
+                    tabSize: 2,
+                    viewportMargin: Infinity
+                });
+            }
+
+            // Set initial placeholder content
+            if (htmlEditor) {
+                htmlEditor.setValue(`<div class="splash-container">
+    <h1 class="splash-title">TestCode</h1>
+    <h2 class="splash-subtitle">Live Code Editor</h2>
+    <p class="splash-description">Write HTML, CSS, and JavaScript code with instant live preview and intelligent code hints</p>
+    
+    <div class="flex-container">
+        <div class="feature-item">
+            <i class="fas fa-code text-4xl"></i>
+            <p class="feature-text">Live Preview</p>
+        </div>
+        <div class="feature-item">
+            <i class="far fa-lightbulb text-4xl"></i>
+            <p class="feature-text">Auto Hints</p>
+        </div>
+        <div class="feature-item">
+            <i class="fas fa-users text-4xl"></i>
+            <p class="feature-text">Live Users</p>
+        </div>
+    </div>
+    
+    <button class="start-button">Start Coding</button>
+</div>`);
+            }
+
+            if (cssEditor) {
+                cssEditor.setValue(`body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #212121; /* Dark Background */
+    color: #f1f1f1; /* White Text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.splash-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4rem 2rem;
+}
+
+.splash-title {
+    font-size: 4rem; 
+    font-weight: 800;
+    color: white;
+}
+
+.splash-subtitle {
+    font-size: 1.5rem; 
+    font-weight: 300;
+    margin-top: -0.5rem;
+    letter-spacing: 0.1em;
+}
+
+.splash-description {
+    font-size: 1rem;
+    color: #aaa;
+    max-width: 30rem;
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.flex-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 2.5rem;
+    gap: 3rem;
+}
+
+.feature-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 80px;
+}
+
+.feature-item i {
+    color: white;
+    margin-bottom: 0.75rem;
+}
+
+.feature-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #aaa;
+}
+
+.start-button {
+    margin-top: 3rem;
+    padding: 0.75rem 2.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    background-color: white;
+    color: #111111;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.start-button:hover {
+    background-color: #dddddd;
+    transform: translateY(-1px);
+}`);
+            }
+
+            if (jsEditor) {
+                jsEditor.setValue(`// The preview is currently showing a splash screen.
+// Write your code in the HTML/CSS panels to start editing!
+
+// Example:
+// document.querySelector('.start-button').addEventListener('click', () => {
+//     alert('Ready to code!');
+// });
+`);
+            }
+        }
+
+        // Debounce function to limit how often the preview updates
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this, args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    func.apply(context, args);
+                }, wait);
+            };
+        }
+
+        /**
+         * Combines HTML, CSS, and JS code into a complete, runnable HTML document
+         * and updates the iframe content.
+         */
+        const updatePreview = () => {
+            try {
+                const htmlCode = htmlEditor ? htmlEditor.getValue() : '';
+                const cssCode = cssEditor ? cssEditor.getValue() : '';
+                const jsCode = jsEditor ? jsEditor.getValue() : '';
+
+                // Construct the complete HTML document
+                const finalHtml = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Live Preview</title>
+                        <style>
+                            /* Reset iframe body margin */
+                            body { margin: 0; min-height: 100vh; }
+                            ${cssCode}
+                        </style>
+                    </head>
+                    <body>
+                        ${htmlCode}
+                        <script>
+                            // Wrap JS in a try/catch to prevent errors from breaking the whole preview
+                            try {
+                                ${jsCode}
+                            } catch (e) {
+                                console.error("Error in user script:", e);
+                                // Simple in-preview error indicator (since alert() is forbidden)
+                                const errorDiv = document.createElement('div');
+                                errorDiv.style.cssText = 'position: fixed; bottom: 0; left: 0; width: 100%; background: #ff4444; color: white; padding: 10px; font-family: sans-serif; font-size: 12px; z-index: 9999; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);';
+                                errorDiv.textContent = 'JS Error: ' + e.message;
+                                document.body.appendChild(errorDiv);
+                                throw e; // Re-throw to see in console
+                            }
+                        <\/script>
+                    </body>
+                    </html>
+                `;
+
+                // Write to iframe
+                if (previewFrame && previewFrame.contentDocument) {
+                    const doc = previewFrame.contentDocument;
+                    doc.open();
+                    doc.write(finalHtml);
+                    doc.close();
+                }
+            } catch (e) {
+                console.error("Error updating preview:", e);
+            }
+        };
+
+        // Add debounced event listeners
+        // FIX: Define debouncedUpdate by calling the debounce function
+        const debouncedUpdate = debounce(updatePreview, 300);
+        
+        // Initialize editors and add listeners after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            initEditors();
+            if (htmlEditor) htmlEditor.on('change', debouncedUpdate);
+            if (cssEditor) cssEditor.on('change', debouncedUpdate);
+            if (jsEditor) jsEditor.on('change', debouncedUpdate);
+            // Initial run
+            setTimeout(updatePreview, 100); // Small delay for iframe readiness
+        });
+
+        // --- Open in New Tab Button ---
+        const openPreviewBtn = document.getElementById('open-preview-btn');
+        if (openPreviewBtn) {
+            openPreviewBtn.addEventListener('click', () => {
+                try {
+                    const htmlCode = htmlEditor ? htmlEditor.getValue() : '';
+                    const cssCode = cssEditor ? cssEditor.getValue() : '';
+                    const jsCode = jsEditor ? jsEditor.getValue() : '';
+
+                    // Construct the complete HTML document (same as updatePreview)
+                    const finalHtml = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Live Preview</title>
+                            <style>
+                                /* Reset body margin */
+                                body { margin: 0; min-height: 100vh; }
+                                ${cssCode}
+                            </style>
+                        </head>
+                        <body>
+                            ${htmlCode}
+                            <script>
+                                // Wrap JS in a try/catch
+                                try {
+                                    ${jsCode}
+                                } catch (e) {
+                                    console.error("Error in user script:", e);
+                                    // Simple in-preview error indicator
+                                    const errorDiv = document.createElement('div');
+                                    errorDiv.style.cssText = 'position: fixed; bottom: 0; left: 0; width: 100%; background: #ff4444; color: white; padding: 10px; font-family: sans-serif; font-size: 12px; z-index: 9999; box-shadow: 0 -2px 5px rgba(0,0,0,0.2);';
+                                    errorDiv.textContent = 'JS Error: ' + e.message;
+                                    document.body.appendChild(errorDiv);
+                                    throw e; // Re-throw to see in console
+                                }
+                            <\/script>
+                        </body>
+                        </html>
+                    `;
+
+                    // Open a new tab and write the content
+                    const newTab = window.open();
+                    if (newTab) {
+                        newTab.document.open();
+                        newTab.document.write(finalHtml);
+                        newTab.document.close();
+                    } else {
+                        // This might happen if popups are blocked
+                        console.error("Could not open new tab. Popup blocker active?");
+                    }
+                } catch (e) {
+                    console.error("Error opening new tab:", e);
+                }
+            });
+        }
+
+        // --- Resizing Logic (Refactored for smoothness) ---
+        const topPane = document.getElementById('top-pane');
+        const bottomPane = document.getElementById('bottom-pane');
+        const mainContainer = document.getElementById('main-container');
+        const resizerH = document.getElementById('resizer-h');
+        const resizersV = document.querySelectorAll('.resizer-v');
+        
+        let isResizing = false;
+        let activeResizer = null;
+        let startX, startY;
+
+        // Vertical Resizing Variables
+        let prevEditor = null;
+        let nextEditor = null;
+        let startPrevWidthPct = 0;
+        let startNextWidthPct = 0;
+        const MIN_EDITOR_WIDTH_PCT = 10;
+        const MIN_PANE_HEIGHT_PX = 100;
+
+        // Horizontal resizer (between editors and preview)
+        if (resizerH) {
+            resizerH.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                activeResizer = 'horizontal';
+                startY = e.clientY;
+                // Use current pixel height for fluid starting point
+                if (topPane) topPane.startHeight = topPane.offsetHeight; 
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            });
+        }
+
+        // Vertical resizers (between editors)
+        if (resizersV) {
+            resizersV.forEach(resizer => {
+                resizer.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    activeResizer = 'vertical';
+                    startX = e.clientX;
+
+                    const prevId = resizer.dataset.prev;
+                    const nextId = resizer.dataset.next;
+                    prevEditor = document.getElementById(prevId);
+                    nextEditor = document.getElementById(nextId);
+
+                    // Store initial widths in percentage for relative calculation
+                    if (prevEditor && nextEditor) {
+                        startPrevWidthPct = parseFloat(prevEditor.style.width) || 33.33;
+                        startNextWidthPct = parseFloat(nextEditor.style.width) || 33.33;
+                    }
+
+                    document.body.style.cursor = 'ew-resize';
+                    e.preventDefault();
+                });
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            if (activeResizer === 'horizontal') {
+                // Handle horizontal resize (editors/preview split)
+                const dy = e.clientY - startY;
+                const newHeightPx = topPane.startHeight + dy;
+                const containerHeight = mainContainer.offsetHeight;
+                const resizerHeight = resizerH.offsetHeight;
+
+                // Calculate constraints
+                const maxTopHeight = containerHeight - MIN_PANE_HEIGHT_PX - resizerHeight;
+                const constrainedTopHeight = Math.max(MIN_PANE_HEIGHT_PX, Math.min(newHeightPx, maxTopHeight));
+
+                // Apply heights
+                if (topPane) topPane.style.height = `${constrainedTopHeight}px`;
+                if (bottomPane) bottomPane.style.height = `${containerHeight - constrainedTopHeight - resizerHeight}px`;
+
+            } else if (activeResizer === 'vertical') {
+                // Handle vertical resize (between editors)
+                if (!prevEditor || !nextEditor) return;
+
+                const dx = e.clientX - startX;
+                if (topPane) {
+                    const containerWidth = topPane.offsetWidth;
+                    // Convert pixel change to percentage change relative to the top pane width
+                    const dxPct = (dx / containerWidth) * 100; 
+
+                    let newPrevWidthPct = startPrevWidthPct + dxPct;
+                    let newNextWidthPct = startNextWidthPct - dxPct;
+
+                    // Apply constraints to prevent zero/negative widths
+                    if (newPrevWidthPct < MIN_EDITOR_WIDTH_PCT) {
+                        newPrevWidthPct = MIN_EDITOR_WIDTH_PCT;
+                        newNextWidthPct = startPrevWidthPct + startNextWidthPct - MIN_EDITOR_WIDTH_PCT;
+                    } else if (newNextWidthPct < MIN_EDITOR_WIDTH_PCT) {
+                        newNextWidthPct = MIN_EDITOR_WIDTH_PCT;
+                        newPrevWidthPct = startPrevWidthPct + startNextWidthPct - MIN_EDITOR_WIDTH_PCT;
+                    }
+
+                    // Apply new widths
+                    prevEditor.style.width = `${newPrevWidthPct}%`;
+                    nextEditor.style.width = `${newNextWidthPct}%`;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                activeResizer = null;
+                document.body.style.cursor = '';
+                
+                // Clear vertical resize state
+                prevEditor = null;
+                nextEditor = null;
+                startPrevWidthPct = 0;
+                startNextWidthPct = 0;
+                if (topPane) topPane.startHeight = 0;
+            }
+        });
+    </script>
+</body>
+</html>
